@@ -13,6 +13,7 @@ scrap_app_reviews = reviews_all(
     sort=Sort.MOST_RELEVANT,
     count=100
 )
+
 print(f'\33]30m Scraping success \33]0m')
 
 # Make a dataframe from retrieved data

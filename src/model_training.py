@@ -5,16 +5,6 @@ from sklearn.ensemble import RandomForestClassifier
 from preprocessing import *
 
 
-df = loading_dataset()
-df_cleaned = cleaning_data(df)
-X = preprocessed_pipeline(df_cleaned['content'])
-
-df_cleaned['labels'] = df_cleaned['content'].apply(analysis_label(
-    lexicon_neg=lexicon_neg,
-    lexicon_pos=lexicon_pos)
-)
-
-
 def rfc_model(X, y):
     X_train, X_test = X
     y_train, y_test = y
@@ -31,12 +21,14 @@ def rfc_model(X, y):
     print(f'random forest training accuracy score: {train_rfc_accuracy:.3f}')
     print(f'random forest testing accuracy score: {test_rfc_accuracy:.3f}')
 
+    return rfc
+
 
 def lstm_model(X, y):
 
     word2vec, params = word2vec_embedding(X)
     X_padded, labels, tokenizer, params = X_y_tokenizing(X, y, params)
-    embedding_matrix, params = embedding_matrix(tokenizer, word2vec, params)
+    embedding_matrix, params = embed_matrix(tokenizer, word2vec, params)
     train_set, test_set, params = tfds_split(X_padded, labels, params)
 
     max_seq_length = params['max_seq_length']
@@ -102,16 +94,45 @@ reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
 )
 
 
-# define model
-# set hyperparameters
+if __name__ == "__main__":
+    # Load data
+    df = loading_dataset()
+    df_cleaned = cleaning_data(df)
+    print(f'dataset cleaned!')
 
-model, train_set, test_set, batch_size = lstm_model()
+    # Preprocessing
+    X = df_cleaned['content'].apply(preprocessed_pipeline)
+    print(
+        f'Content has preprocessed,\nan example of processed content: {X.iloc[0]}')
 
-model.compile(
-    optimizer=tf.keras.optimizers.RMSprop(learning_rate=5e-4, momentum=0.9),
-    loss=tf.keras.losses.BinaryCrossentropy(),
-    metrics=['accuracy']
-)
+    df_cleaned['labels'] = df_cleaned['content'].apply(analysis_label)
+    print(f'content labels added!')
 
-history = model.fit(train_set, epochs=50, validation_data=test_set,
-                    batch_size=batch_size, callbacks=[stop_training_cb, reduce_lr])
+    y = df_cleaned['labels']
+    print(f'Successfull preprocessed, X shape: {X.shape}, y shape: {y.shape}')
+
+    tfidf, X_tfidf = fit_transform_tfidf(X)
+    print(f'successfull tfidf transforming to X')
+    X_rfc, y_rfc = split_data(X_tfidf, y)
+    print(f'splitted train and test data for rfc model')
+
+    # Train model
+    print(f'trainind rfc model for split 80/20')
+    rfc_model_80 = rfc_model(X_rfc['80'], y_rfc['80'])
+
+    print(f'trainind rfc model for split 70/30')
+    rfc_model_70 = rfc_model(X_rfc['70'], y_rfc['70'])
+
+    # define lstm model
+    lstm_model, train_set, test_set, batch_size = lstm_model(X, y)
+
+    if lstm_model:
+        lstm_model.compile(
+            optimizer=tf.keras.optimizers.RMSprop(
+                learning_rate=5e-4, momentum=0.9),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=['accuracy']
+        )
+
+        history = lstm_model.fit(train_set, epochs=50, validation_data=test_set,
+                                 batch_size=batch_size, callbacks=[stop_training_cb, reduce_lr])
