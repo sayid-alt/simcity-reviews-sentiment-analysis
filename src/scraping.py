@@ -1,4 +1,4 @@
-from google_play_scraper import reviews_all, Sort, app
+from google_play_scraper import reviews_all, Sort
 import pandas as pd
 
 # set the application id for google play
