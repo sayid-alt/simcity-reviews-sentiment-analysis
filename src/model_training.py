@@ -1,68 +1,79 @@
-from sklearn.model_selection import LearningCurveDisplay, learning_curve, StratifiedKFold
+import tensorflow as tf
+
+from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
+from preprocessing import *
 
-rfc = RandomForestClassifier(random_state=42)
-rfc.fit(X_train_80, y_train_80)
 
-y_pred_train_80 = rfc.predict(X_train_80)
-y_pred_test_20 = rfc.predict(X_test_20)
+df = loading_dataset()
+df_cleaned = cleaning_data(df)
+X = preprocessed_pipeline(df_cleaned['content'])
 
-train_rfc_accuracy_80 = accuracy_score(y_pred_train_80, y_train_80)
-test_rfc_accuracy_70 = accuracy_score(y_pred_test_20, y_test_20)
+df_cleaned['labels'] = df_cleaned['content'].apply(analysis_label(
+    lexicon_neg=lexicon_neg,
+    lexicon_pos=lexicon_pos)
+)
 
-print(f'random forest training accuracy score: {train_rfc_accuracy_80:.3f}')
-print(f'random forest testing accuracy score: {test_rfc_accuracy_70:.3f}')
 
-# input_user = input("Input sentence: ")
+def rfc_model(X, y):
+    X_train, X_test = X
+    y_train, y_test = y
 
-# preprop = preprocessed_pipeline(input_user)
-# tfidf_vector = tfidf.transform([preprop])
+    rfc = RandomForestClassifier(random_state=42)
+    rfc.fit(X_train, y_train)
 
-# rfc.predict(tfidf_vector)
+    y_pred_train = rfc.predict(X_train)
+    y_pred_test = rfc.predict(X_test)
 
-"""### **7.3.2 `Random Forest` with `TF-IDF` and `70/30` split**"""
+    train_rfc_accuracy = accuracy_score(y_pred_train, y_train)
+    test_rfc_accuracy = accuracy_score(y_pred_test, y_test)
 
-rfc.fit(X_train_70, y_train_70)
+    print(f'random forest training accuracy score: {train_rfc_accuracy:.3f}')
+    print(f'random forest testing accuracy score: {test_rfc_accuracy:.3f}')
 
-y_pred_train_70 = rfc.predict(X_train_70)
-y_pred_test_30 = rfc.predict(X_test_30)
 
-train_rfc_accuracy_70 = accuracy_score(y_pred_train_70, y_train_70)
-test_rfc_accuracy_30 = accuracy_score(y_pred_test_30, y_test_30)
+def lstm_model(X, y):
 
-print(f'random forest training accuracy score: {train_rfc_accuracy_70}')
-print(f'random forest testing accuracy score: {test_rfc_accuracy_30}')
+    word2vec, params = word2vec_embedding(X)
+    X_padded, labels, tokenizer, params = X_y_tokenizing(X, y, params)
+    embedding_matrix, params = embedding_matrix(tokenizer, word2vec, params)
+    train_set, test_set, params = tfds_split(X_padded, labels, params)
 
-# # Inference for the Model
-# input_user = input("Input sentence: ")
+    max_seq_length = params['max_seq_length']
+    vocab_size = params['vocab_size']
+    embedding_dims = params['embedding_dims']
+    batch_size = params['batch_size']
 
-# preprop = preprocessed_pipeline(input_user)
-# tfidf_vector = tfidf.transform([preprop])
+    # Define the input shape
+    input = tf.keras.layers.Input((max_seq_length,), name='input_layer')
 
-# rfc.predict(tfidf_vector)
+    # embedding layer
+    embedding_layer = tf.keras.layers.Embedding(input_dim=vocab_size,
+                                                output_dim=embedding_dims,
+                                                weights=[embedding_matrix],
+                                                trainable=False)(input)
 
-"""### **7.3.3 `LSTM` with `Word2Vec` and `80/20` split**"""
+    # bilstm
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, name="bilstm_layer",
+                                                           return_sequences=True))(embedding_layer)
+    x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, name="bilstm_layer_2",
+                                                           return_sequences=False))(x)
 
-# Define the input shape
-input = tf.keras.layers.Input((max_seq_length,), name='input_layer')
-embedding_layer = tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dims,
-                                            weights=[embedding_matrix], trainable=False)(input)
+    # full-connected layers
+    x = tf.keras.layers.Dense(64, activation="relu", name="ff_1")(x)
+    x = tf.keras.layers.Dense(16, activation='relu', name="ff_2")(x)
+    outputs = tf.keras.layers.Dense(
+        1, activation="sigmoid", name="output_layer")(x)
 
-# Add layersΩΩ
-x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, name="bilstm_layer",
-                                                       return_sequences=True))(embedding_layer)
-x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, name="bilstm_layer_2",
-                                                       return_sequences=False))(x)
-x = tf.keras.layers.Dense(64, activation="relu", name="ff_1")(x)
-x = tf.keras.layers.Dense(16, activation='relu', name="ff_2")(x)
-outputs = tf.keras.layers.Dense(
-    1, activation="sigmoid", name="output_layer")(x)
+    # Create the model
+    model = tf.keras.Model(inputs=input, outputs=outputs, name="build_model")
 
-# Create the model
-model = tf.keras.Model(inputs=input, outputs=outputs, name="build_model")
+    # Print the model summary
+    model.summary()
 
-# Print the model summary
-model.summary()
+    return model, train_set, test_set, batch_size
+
+###### set callbacks ######
 
 
 class EarlyStopTrainingAtAccuracy(tf.keras.callbacks.Callback):
@@ -90,6 +101,12 @@ reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
     min_lr=0.00001,
 )
 
+
+# define model
+# set hyperparameters
+
+model, train_set, test_set, batch_size = lstm_model()
+
 model.compile(
     optimizer=tf.keras.optimizers.RMSprop(learning_rate=5e-4, momentum=0.9),
     loss=tf.keras.losses.BinaryCrossentropy(),
@@ -98,26 +115,3 @@ model.compile(
 
 history = model.fit(train_set, epochs=50, validation_data=test_set,
                     batch_size=batch_size, callbacks=[stop_training_cb, reduce_lr])
-
-# Plot Training & Validation Loss
-plt.figure(figsize=(14, 5))
-
-# Plot Loss
-plt.subplot(1, 2, 1)
-plt.plot(history.history['loss'], label='Training Loss')
-plt.plot(history.history['val_loss'], label='Validation Loss')
-plt.title('Training and Validation Loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-
-# Plot Accuracy
-plt.subplot(1, 2, 2)
-plt.plot(history.history['accuracy'], label='Training Accuracy')
-plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.title('Training and Validation Accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.legend()
-
-plt.show()
