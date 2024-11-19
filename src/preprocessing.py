@@ -218,7 +218,7 @@ def analysis_label(content):
 
 
 def fit_transform_tfidf(X):
-    tfidf = TfidfVectorizer(max_features=1000)
+    tfidf = TfidfVectorizer(max_features=10000)
     X_tfidf = tfidf.fit_transform(X)
 
     return tfidf, X_tfidf
