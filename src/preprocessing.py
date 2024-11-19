@@ -337,11 +337,11 @@ def tfds_split(X, y, params):
 
 
 def split_data(X, y):
-    X_train_80, X_test_20, y_train_80, y_test_20 = train_test_split(X, y,
+    X_train_80, X_test_20, y_train_80, y_test_20 = train_test_split(X.toarray(), y,
                                                                     test_size=0.2,
                                                                     stratify=y, random_state=42)
 
-    X_train_70, X_test_30, y_train_70, y_test_30 = train_test_split(X, y,
+    X_train_70, X_test_30, y_train_70, y_test_30 = train_test_split(X.toarray(), y,
                                                                     test_size=0.3,
                                                                     stratify=y,
                                                                     random_state=42)

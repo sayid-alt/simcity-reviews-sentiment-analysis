@@ -1,31 +1,38 @@
 import tensorflow as tf
 
 from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from preprocessing import *
+from sklearn.preprocessing import StandardScaler
+import time
 
 
-def rfc_model(X, y):
+def model_fit(model, X, y):
+    start_time = time.time()
     X_train, X_test = X
     y_train, y_test = y
 
-    rfc = RandomForestClassifier(random_state=42)
-    rfc.fit(X_train, y_train)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-    y_pred_train = rfc.predict(X_train)
-    y_pred_test = rfc.predict(X_test)
+    model.fit(X_train, y_train)
 
-    train_rfc_accuracy = accuracy_score(y_pred_train, y_train)
-    test_rfc_accuracy = accuracy_score(y_pred_test, y_test)
+    y_pred_train = model.predict(X_train_scaled)
+    y_pred_test = model.predict(X_test_scaled)
 
-    print(f'random forest training accuracy score: {train_rfc_accuracy:.3f}')
-    print(f'random forest testing accuracy score: {test_rfc_accuracy:.3f}')
+    train_model_accuracy = accuracy_score(y_pred_train, y_train)
+    test_model_accuracy = accuracy_score(y_pred_test, y_test)
 
-    return rfc
+    print(f'{type(model).__name__} training accuracy score: {train_model_accuracy:.3f}')
+    print(f'{type(model).__name__} testing accuracy score: {test_model_accuracy:.3f}')
+
+    print(f'time consumed: {time.time() - start_time:.3f} sec')
+
+    return model
 
 
 def lstm_model(X, y):
-
     word2vec, params = word2vec_embedding(X)
     X_padded, labels, tokenizer, params = X_y_tokenizing(X, y, params)
     embedding_matrix, params = embed_matrix(tokenizer, word2vec, params)
@@ -65,9 +72,8 @@ def lstm_model(X, y):
 
     return model, train_set, test_set, batch_size
 
+
 ###### set callbacks ######
-
-
 class EarlyStopTrainingAtAccuracy(tf.keras.callbacks.Callback):
     def __init__(self, target_accuracy):
         super().__init__()
@@ -85,12 +91,12 @@ class EarlyStopTrainingAtAccuracy(tf.keras.callbacks.Callback):
 target_accuracy = 0.921
 stop_training_cb = EarlyStopTrainingAtAccuracy(target_accuracy)
 reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
-    monitor='accuracy',
+    monitor='val_loss',
     factor=0.2,
     patience=2,
     verbose=1,
-    mode='max',
-    min_lr=0.00001,
+    mode='min',
+    min_lr=0.001,
 )
 
 
@@ -112,16 +118,22 @@ if __name__ == "__main__":
     print(f'Successfull preprocessed, X shape: {X.shape}, y shape: {y.shape}')
 
     tfidf, X_tfidf = fit_transform_tfidf(X)
-    print(f'successfull tfidf transforming to X')
-    X_rfc, y_rfc = split_data(X_tfidf, y)
+    print(f'successfull transform X to tfidf extraction')
+
+    X_preproc, y_preproc = split_data(X_tfidf, y)
     print(f'splitted train and test data for rfc model')
 
     # Train model
+    # Train rfc model
     print(f'trainind rfc model for split 80/20')
-    rfc_model_80 = rfc_model(X_rfc['80'], y_rfc['80'])
 
-    print(f'trainind rfc model for split 70/30')
-    rfc_model_70 = rfc_model(X_rfc['70'], y_rfc['70'])
+    rfc_model_80 = model_fit(RandomForestClassifier(random_state=42),
+                             X_preproc['80'], y_preproc['80'])
+
+    # train gradient boosting model
+    print(f'trainind Gradient Boosting model for split 70/30')
+    gb_model_70 = model_fit(HistGradientBoostingClassifier(),
+                            X_preproc['70'], y_preproc['70'])
 
     # define lstm model
     lstm_model, train_set, test_set, batch_size = lstm_model(X, y)
