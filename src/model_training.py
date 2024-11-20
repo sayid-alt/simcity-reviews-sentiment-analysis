@@ -111,15 +111,19 @@ if __name__ == "__main__":
     print(
         f'Content has preprocessed,\nan example of processed content: {X.iloc[0]}')
 
+    # labeling
     df_cleaned['labels'] = df_cleaned['content'].apply(analysis_label)
     print(f'content labels added!')
 
+    # set y variable as a label
     y = df_cleaned['labels']
     print(f'Successfull preprocessed, X shape: {X.shape}, y shape: {y.shape}')
 
+    # get X transformed and tfidf model
     tfidf, X_tfidf = fit_transform_tfidf(X)
     print(f'successfull transform X to tfidf extraction')
 
+    # splitting tfidf transformed d
     X_preproc, y_preproc = split_data(X_tfidf, y)
     print(f'splitted train and test data for rfc model')
 
