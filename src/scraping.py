@@ -20,7 +20,7 @@ print(f'\33[32m Scraping success \33[0m')
 app_reviews_df = pd.DataFrame(scrap_app_reviews)
 
 # convert into csv file to donwload
-csv_path = '/datasets/simcity_reviews2.csv'
+csv_path = './datasets/simcity_reviews.csv'
 print(f'Loading download csv file to {csv_path}')
 app_reviews_df.to_csv(csv_path, index=False)
 print(f'\33[32m Success Download csv file to {csv_path}\33[0m')
