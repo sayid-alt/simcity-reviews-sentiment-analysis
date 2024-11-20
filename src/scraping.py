@@ -14,7 +14,7 @@ scrap_app_reviews = reviews_all(
     count=100
 )
 
-print(f'\33]30m Scraping success \33]0m')
+print(f'\33[32m Scraping success \33[0m')
 
 # Make a dataframe from retrieved data
 app_reviews_df = pd.DataFrame(scrap_app_reviews)
@@ -23,7 +23,7 @@ app_reviews_df = pd.DataFrame(scrap_app_reviews)
 csv_path = '/datasets/simcity_reviews2.csv'
 print(f'Loading download csv file to {csv_path}')
 app_reviews_df.to_csv(csv_path, index=False)
-print(f'\33]30m Success Download csv file to {csv_path}\33]0m')
+print(f'\33[32m Success Download csv file to {csv_path}\33[0m')
 
 # get number of reviews and columns
 num_of_reviews, num_of_columns = app_reviews_df.shape
