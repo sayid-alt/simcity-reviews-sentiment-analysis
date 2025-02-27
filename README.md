@@ -64,7 +64,7 @@ The project aims to:
 | Gradient Boosting (TF-IDF, 70/30) | 94.2%        | 92.8%            | 135.819 sec  |
 | LSTM (Word2Vec, 80/20)         | 98.3%            | 98.24% (val)     | N/A          |
 
-<a href="https://raw.githubusercontent.com/sayid-alt/simcity-reviews-sentiment-analysis/refs/heads/main/img/training-chart.jpeg"/>
+<img src="https://raw.githubusercontent.com/sayid-alt/simcity-reviews-sentiment-analysis/refs/heads/main/img/training-chart.jpeg" />
 
 ## Conclusion
 This sentiment analysis study helps in understanding user feedback trends for *SimCity BuildIt*, offering valuable insights to developers and stakeholders. Future work can include fine-tuning deep learning architectures or incorporating additional NLP techniques for enhanced accuracy.
