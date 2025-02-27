@@ -54,6 +54,16 @@ The project aims to:
 - Provide insights that can help improve app development and user satisfaction.
 - Compare machine learning and deep learning approaches for sentiment analysis.
 
+
+## Model Performances
+## Model Training Results
+
+| Model                         | Training Accuracy | Testing Accuracy | Time Consumed |
+|--------------------------------|------------------|------------------|--------------|
+| Random Forest (TF-IDF, 80/20)  | 99.7%            | 93.6%            | 216.463 sec  |
+| Gradient Boosting (TF-IDF, 70/30) | 94.2%        | 92.8%            | 135.819 sec  |
+| LSTM (Word2Vec, 80/20)         | 98.3%            | 98.24% (val)     | N/A          |
+
 ## Conclusion
 This sentiment analysis study helps in understanding user feedback trends for *SimCity BuildIt*, offering valuable insights to developers and stakeholders. Future work can include fine-tuning deep learning architectures or incorporating additional NLP techniques for enhanced accuracy.
 
